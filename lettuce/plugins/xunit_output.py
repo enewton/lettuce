@@ -55,9 +55,6 @@ def enable(filename=None):
     @after.each_step
     def create_test_case_step(step):
         parent = step.scenario or step.background
-        if getattr(parent, 'outlines', None):
-            return
-        
         name = getattr(parent, 'name', 'Background')    # Background sections are nameless
         classname = u"%s : %s" % (parent.feature.name, name)
         tc = doc.createElement("testcase")
@@ -69,8 +66,12 @@ def enable(filename=None):
             tc.setAttribute("time", str(total_seconds(timedelta(seconds=0))))
 
         if not step.ran:
-            skip = doc.createElement("skipped")
-            skip.setAttribute("type", "UndefinedStep(%s)" % step.sentence)
+            if step.defined_at:
+                 skip = doc.createElement("skipped")
+                 skip.setAttribute("type", "SkippedStep(%s)" % step.sentence)
+            else:
+                 skip = doc.createElement("error")
+                 skip.setAttribute("type", "UndefinedStep(%s)" % step.sentence)
             tc.appendChild(skip)
 
         if step.failed:
@@ -84,33 +85,12 @@ def enable(filename=None):
 
         root.appendChild(tc)
 
-    @before.outline
-    def time_outline(scenario, order, outline, reasons_to_fail):
-        scenario.outline_started = datetime.now()
-        pass
-
-    @after.outline
-    def create_test_case_outline(scenario, order, outline, reasons_to_fail):
-        classname = "%s : %s" % (scenario.feature.name, scenario.name)
-        tc = doc.createElement("testcase")
-        tc.setAttribute("classname", classname)
-        tc.setAttribute("name", u'| %s |' % u' | '.join(outline.values()))
-        tc.setAttribute("time", str(total_seconds((datetime.now() - scenario.outline_started))))
-
-        for reason_to_fail in reasons_to_fail:
-            cdata = doc.createCDATASection(reason_to_fail.traceback)
-            failure = doc.createElement("failure")
-            failure.setAttribute("message", reason_to_fail.cause)
-            failure.appendChild(cdata)
-            tc.appendChild(failure)
-
-        root.appendChild(tc)
-
     @after.all
     def output_xml(total):
         root.setAttribute("tests", str(total.steps))
         root.setAttribute("failures", str(total.steps_failed))
-        root.setAttribute("errors", '0')
+        root.setAttribute("errors", str(total.steps_undefined))
+        root.setAttribute("skipped", str(total.steps_skipped))
         root.setAttribute("time", '0')
         doc.appendChild(root)
         write_xml_doc(output_filename, doc)

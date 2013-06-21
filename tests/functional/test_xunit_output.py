@@ -149,7 +149,7 @@ def test_xunit_output_with_no_steps():
         assert_equals(root.get("tests"), "1")
         assert_equals(root.find("testcase").get("name"), "Given I do nothing")
         assert_equals(len(root.getchildren()), 1)
-        assert_equals(root.find("testcase/skipped").get("type"), "UndefinedStep(Given I do nothing)")
+        assert_equals(root.find("testcase/error").get("type"), "UndefinedStep(Given I do nothing)")
         assert_equals(float(root.find("testcase").get("time")), 0)
 
     old = xunit_output.wrt_output
