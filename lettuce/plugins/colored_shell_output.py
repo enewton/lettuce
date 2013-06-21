@@ -76,6 +76,10 @@ def print_step_running(step):
 
 @after.each_step
 def print_step_ran(step):
+
+    if step.subsequent_outline:
+        return
+
     if step.scenario and step.scenario.outlines and (step.failed or step.passed or step.defined_at):
         return
 

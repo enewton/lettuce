@@ -7,6 +7,10 @@ from lettuce.terrain import after
 def enable(runner):
     @after.each_step
     def failfast_or_pdb(step):
+    
+        if step.subsequent_outline:
+            return
+            
         has_traceback = step.why
 
         if not has_traceback:

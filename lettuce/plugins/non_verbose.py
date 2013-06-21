@@ -28,6 +28,10 @@ def print_step_running(step):
 
 @after.each_step
 def print_step_ran(step):
+
+    if step.subsequent_outline:
+        return
+        
     logging.info("\033[A" + step.represent_string(step.sentence))
 
 

@@ -425,7 +425,7 @@ class Step(object):
         return line
 
     @staticmethod
-    def run_all(steps, outline=None, run_callbacks=False, ignore_case=True, failfast=False):
+    def run_all(steps, outline=None, subsequent_outline=True, ignore_case=True, failfast=False):
         """Runs each step in the given list of steps.
 
         Returns a tuple of five lists:
@@ -449,7 +449,7 @@ class Step(object):
             try:
                 step.pre_run(ignore_case, with_outline=outline)
 
-                if run_callbacks:
+                if not subsequent_outline:
                     call_hook('before_each', 'step', step)
 
                 if not steps_failed and not steps_undefined:
@@ -467,8 +467,8 @@ class Step(object):
 
             finally:
                 all_steps.append(step)
-                if run_callbacks:
-                    call_hook('after_each', 'step', step)
+                step.subsequent_outline = subsequent_outline
+                call_hook('after_each', 'step', step)
 
         return (all_steps, steps_passed, steps_failed, steps_undefined, reasons_to_fail)
 
@@ -696,12 +696,12 @@ class Scenario(object):
         results = []
         call_hook('before_each', 'scenario', self)
 
-        def run_scenario(almost_self, order=-1, outline=None, run_callbacks=False):
+        def run_scenario(almost_self, order=-1, outline=None, subsequent_outline=False):
             try:
                 if self.background:
                     self.background.run(ignore_case)
 
-                all_steps, steps_passed, steps_failed, steps_undefined, reasons_to_fail = Step.run_all(self.steps, outline, run_callbacks, ignore_case, failfast=failfast)
+                all_steps, steps_passed, steps_failed, steps_undefined, reasons_to_fail = Step.run_all(self.steps, outline, subsequent_outline, ignore_case, failfast=failfast)
             except:
                 if failfast:
                     call_hook('after_each', 'scenario', self)
@@ -725,10 +725,10 @@ class Scenario(object):
         if self.outlines:
             first = True
             for index, outline in enumerate(self.outlines):
-                results.append(run_scenario(self, index, outline, run_callbacks=first))
+                results.append(run_scenario(self, index, outline, subsequent_outline = not first))
                 first = False
         else:
-            results.append(run_scenario(self, run_callbacks=True))
+            results.append(run_scenario(self, subsequent_outline=False))
 
         call_hook('after_each', 'scenario', self)
         return results
@@ -901,7 +901,7 @@ class Background(object):
             except Exception, e:
                 print e
                 pass
-
+            step.subsequent_outline = False
             call_hook('after_each', 'step', step)
 
         call_hook('after_each', 'background', self, results)
