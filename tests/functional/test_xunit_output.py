@@ -214,3 +214,31 @@ def test_xunit_xml_output_with_no_errors():
         runner.run()
     finally:
         xunit_output.write_xml_doc = old
+
+@with_setup(prepare_stdout, registry.clear)
+def test_xunit_output_with_outlines():
+    'Test xunit output with outlines'
+    called = []
+    def assert_correct_xml(filename, content):
+        print filename
+        print content
+        called.append(True)
+        assert_xsd_valid(filename, content)
+        root = etree.fromstring(content)
+        assert_equals(root.get("tests"), "22")
+        assert_equals(root.get("errors"), "5")
+        assert_equals(root.get("failures"), "0")
+        assert_equals(root.get("skipped"), "4")
+        assert_equals(len(root.findall("testcase")), 22)
+        assert_equals(len(root.findall("testcase/error")), 5)
+        assert_equals(len(root.findall("testcase/skipped")), 4)
+        assert_equals(root.find("testcase/error").get("type"), "UndefinedStep(When this test step is undefined)")
+        assert_equals(root.find("testcase/skipped").get("type"), "SkippedStep(When the input is set to 1)")
+
+    old = xunit_output.wrt_output
+    xunit_output.wrt_output = assert_correct_xml
+    runner = Runner(feature_name('xunit_outlines'), enable_xunit=True)
+    runner.run()
+
+    assert_equals(1, len(called), "Function not called")
+    xunit_output.wrt_output = old
